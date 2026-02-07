@@ -1,0 +1,188 @@
+/* ===== Reset / anti-overflow ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+#app {
+  width: 100%;
+}
+
+/* ===== Base ===== */
+:root {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+body {
+  background: #f6f7fb;
+  color: #111;
+}
+
+.container {
+  max-width: 960px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+.card {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  min-width: 0;
+}
+
+label {
+  font-weight: 600;
+}
+
+input {
+  padding: 10px 12px;
+  border: 1px solid #d0d4dd;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+button {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+button.secondary {
+  background: transparent;
+  border: 1px solid #d0d4dd;
+}
+
+.hint {
+  display: inline-block;
+  margin-top: 12px;
+  color: #555;
+}
+
+.muted { color: #555; }
+.small { font-size: 13px; }
+.goal { font-weight: 700; font-size: 18px; }
+
+/* ===== Paso 2 ===== */
+.stack {
+  display: grid;
+  gap: 8px;
+}
+
+textarea {
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d0d4dd;
+  font-size: 14px;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.list-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e3e6ee;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+button.icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: inline-grid;
+  place-items: center;
+}
+
+/* ===== Grafo + QA ===== */
+.graph-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.qa-card {
+  border: 1px solid #e3e6ee;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+
+.progress {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.question {
+  margin: 10px 0 12px;
+}
+
+.actions-col {
+  display: grid;
+  gap: 8px;
+}
+
+/* ===== Cytoscape containers ===== */
+.cy-container {
+  width: 100%;
+  max-width: 100%;
+  height: 480px;
+  border: 1px solid #e3e6ee;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.cy-plan {
+  width: 100%;
+  max-width: 100%;
+  height: 320px;
+  border: 1px solid #e3e6ee;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
