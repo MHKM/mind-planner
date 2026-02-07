@@ -1,24 +1,24 @@
 export function renderGoalScreen(root, { initialValue = "", onSubmit }) {
   root.innerHTML = `
     <main class="container">
-      <h1>Planificador (MVP)</h1>
-      <p>Escribe el objetivo que quieres resolver.</p>
+      <h1>Define tu objetivo</h1>
+      <p>Dinos qué quieres conseguir. A partir de esto, te ayudaremos a crear un plan paso a paso.</p>
 
       <form id="goal-form" class="card">
-        <label for="goal-input">Objetivo</label>
+        <label for="goal-input">¿Qué quieres lograr?</label>
         <input
           id="goal-input"
           name="goal"
           type="text"
-          placeholder="Ej: Montar la app MVP del grafo"
+          placeholder="Ej: Lanzar una web personal en un mes"
           value="${escapeHtml(initialValue)}"
           autocomplete="off"
           required
         />
-        <button type="submit">Continuar</button>
+        <button type="submit">Crear plan</button>
       </form>
 
-      <small class="hint">Tip: sé específico (“hacer X en Y días”).</small>
+      <small class="hint">Cuanto más claro sea el objetivo, mejor será el plan.</small>
     </main>
   `;
 

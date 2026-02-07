@@ -1,7 +1,7 @@
 export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
   root.innerHTML = `
     <main class="container">
-      <h1>Planificador (MVP)</h1>
+      <h1>Describe las tareas</h1>
 
       <section class="card">
         <div class="muted">Objetivo</div>
@@ -9,26 +9,26 @@ export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
       </section>
 
       <section class="card">
-        <h2>Paso 2: Define los elementos (5–10)</h2>
+        <h2>Define entre 5 y 10 tareas</h2>
         <p class="muted">
-          Usa una <strong>etiqueta corta</strong> para el nodo del grafo y una descripción opcional.
+          Escribe las tareas o pasos necesarios para lograr tu objetivo. Usa un nombre corto y, si quieres, añade una breve descripción.
         </p>
 
         <form id="add-form" class="stack">
           <input
             id="label-input"
             type="text"
-            placeholder="Etiqueta (ej: UI, Modelo, Algoritmo)"
+            placeholder="Nombre de la tarea (ej: Diseñar UI, Preparar datos, Publicar)"
             maxlength="30"
             required
           />
           <textarea
             id="desc-input"
-            placeholder="Descripción (opcional)"
+            placeholder="Descripción (opcional). Ej: qué incluye o qué significa “hecho”."
             rows="2"
           ></textarea>
 
-          <button type="submit">Añadir</button>
+          <button type="submit">Añadir tarea</button>
         </form>
 
         <div class="muted counter">${items.length} / 10</div>
@@ -36,12 +36,12 @@ export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
         <ul id="items-list" class="list"></ul>
 
         <div class="actions">
-          <button id="back-btn" type="button" class="secondary">Atrás</button>
+          <button id="back-btn" type="button" class="secondary">Volver</button>
           <button id="next-btn" type="button">Continuar</button>
         </div>
 
         <small class="muted">
-          El grafo usará la etiqueta. La descripción es solo contexto.
+          Consejo: intenta que cada tarea sea accionable (algo que puedas marcar como “hecho”).
         </small>
       </section>
     </main>
@@ -61,7 +61,7 @@ export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
     e.preventDefault();
 
     if (items.length >= 10) {
-      alert("Máximo 10 elementos.");
+      alert("Puedes añadir como máximo 10 tareas.");
       return;
     }
 
@@ -96,7 +96,7 @@ export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
 
   nextBtn.addEventListener("click", () => {
     if (items.length < 5) {
-      alert("Añade al menos 5 elementos.");
+      alert("Añade al menos 5 tareas para poder generar el plan.");
       return;
     }
     onNext(items);
@@ -120,6 +120,8 @@ export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
             type="button"
             data-action="remove"
             data-id="${it.id}"
+            aria-label="Eliminar tarea"
+            title="Eliminar"
           >✕</button>
         </li>
       `
