@@ -1,6 +1,7 @@
 import cytoscape from "cytoscape";
 import { allPairs, edgeExists } from "../app/pairs.js";
 import { computePlanLevels } from "../app/planLevels.js";
+import { topoSortPriority } from "../app/topoSortPriority.js";
 
 export function renderGraphScreen(root, { goal, items, edges, onBack }) {
   const idToItem = new Map(items.map((it) => [it.id, it]));
@@ -11,7 +12,7 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
 
   root.innerHTML = `
     <main class="container">
-      <h1>Planificador (MVP)</h1>
+      <h1>Define el orden de las tareas</h1>
 
       <section class="card">
         <div class="muted">Objetivo</div>
@@ -20,7 +21,7 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
 
       <section class="card">
         <div class="graph-header">
-          <h2 style="margin:0">Grafo de dependencias</h2>
+          <h2 style="margin:0">Dependencias entre tareas</h2>
           <button id="back-btn" type="button" class="secondary">Volver</button>
         </div>
 
@@ -30,8 +31,10 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
           </div>
 
           <div class="qa">
-            <h3 style="margin-top:0">Paso 3: Dependencias</h3>
-            <p class="muted">Responde para crear arcos (flechas). Se dibujan al instante.</p>
+            <h3 style="margin-top:0">Define qué va antes</h3>
+            <p class="muted">
+              Para cada pareja de tareas, indica si una necesita que la otra esté hecha antes.
+            </p>
 
             <div class="qa-card">
               <div class="muted">Progreso</div>
@@ -42,8 +45,12 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
               <div class="actions-col">
                 <button id="a-dep-b" type="button"></button>
                 <button id="b-dep-a" type="button"></button>
-                <button id="none" type="button" class="secondary">No hay dependencia</button>
+                <button id="none" type="button" class="secondary">Son independientes</button>
               </div>
+
+              <small class="muted small">
+                Ejemplo: si “Publicar” necesita “Preparar” antes, entonces primero va “Preparar”.
+              </small>
             </div>
           </div>
         </div>
@@ -51,15 +58,27 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
 
       <section class="card">
         <div class="graph-header">
-          <h2 style="margin:0">Plan por olas (paralelo)</h2>
-          <button id="gen-plan" type="button">Generar plan</button>
+          <h2 style="margin:0">Tu plan</h2>
+
+          <div class="plan-controls">
+            <div class="plan-select">
+              <span class="plan-select__label muted small">Modo</span>
+              <select id="plan-mode" class="plan-select__control" aria-label="Modo de plan">
+                <option value="waves" selected>Paralelo (olas)</option>
+                <option value="linear">Secuencia (una tras otra)</option>
+              </select>
+            </div>
+
+            <button id="gen-plan" type="button">Generar plan</button>
+          </div>
         </div>
+
         <p class="muted" style="margin-top:8px">
-          Cada columna es una <strong>ola</strong>. Los elementos dentro de la misma ola pueden ejecutarse en cualquier orden (o en paralelo).
+          En <strong>Secuencia</strong>, si hay varias tareas posibles a la vez, se prioriza la que desbloquea más tareas.
         </p>
 
         <div id="planCy" class="cy-plan"></div>
-        <div id="plan-msg" class="muted small" style="margin-top:10px">Aún no generado.</div>
+        <div id="plan-msg" class="muted small" style="margin-top:10px">Aún no has generado el plan.</div>
       </section>
     </main>
   `;
@@ -114,17 +133,17 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
     ],
   });
 
-  // ===== Cytoscape: plan por olas =====
+  // ===== Cytoscape: plan =====
   const planCy = cytoscape({
     container: root.querySelector("#planCy"),
     elements: [],
-    layout: { name: "preset" }, // posiciones manuales
+    layout: { name: "preset" },
     style: [
       {
         selector: "node",
         style: {
           shape: "round-rectangle",
-          width: 160,
+          width: 170,
           height: 48,
           label: "data(label)",
           "text-valign": "center",
@@ -147,13 +166,13 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
         },
       },
       { selector: ".cycle", style: { "border-color": "#d93025", "border-width": 4 } },
-      { selector: ".waveLabel", style: { "font-size": 11, color: "#555" } },
     ],
   });
 
   const progressEl = root.querySelector("#progress");
   const questionEl = root.querySelector("#question");
   const planMsgEl = root.querySelector("#plan-msg");
+  const planModeEl = root.querySelector("#plan-mode");
 
   const btnAdepB = root.querySelector("#a-dep-b");
   const btnBdepA = root.querySelector("#b-dep-a");
@@ -164,10 +183,10 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
 
   function refreshQA() {
     const decided = countDecidedPairs(pairs, edges);
-    progressEl.textContent = `${decided} / ${pairs.length} pares`;
+    progressEl.textContent = `${decided} / ${pairs.length} parejas`;
 
     if (pairIndex >= pairs.length) {
-      questionEl.innerHTML = `<strong>¡Listo!</strong><br/>Ya has respondido todos los pares.`;
+      questionEl.innerHTML = `<strong>¡Listo!</strong><br/>Ya has respondido todas las parejas.`;
       btnAdepB.disabled = true;
       btnBdepA.disabled = true;
       btnNone.disabled = true;
@@ -183,16 +202,22 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
     questionEl.innerHTML = `
       <div class="muted">Pregunta</div>
       <div><strong>${escapeHtml(A.label)}</strong> y <strong>${escapeHtml(B.label)}</strong></div>
-      <div class="muted small" style="margin-top:6px">¿Cuál depende de cuál?</div>
+      <div class="muted small" style="margin-top:6px">¿Cuál necesita ir antes?</div>
     `;
 
-    btnAdepB.textContent = `${A.label} depende de ${B.label}`;
-    btnBdepA.textContent = `${B.label} depende de ${A.label}`;
+    btnAdepB.textContent = `${A.label} necesita ${B.label} antes`;
+    btnBdepA.textContent = `${B.label} necesita ${A.label} antes`;
 
     cy.nodes().removeClass("focus");
     cy.getElementById(a).addClass("focus");
     cy.getElementById(b).addClass("focus");
     cy.edges().removeClass("focusEdge");
+  }
+
+  function invalidatePlan() {
+    planCy.elements().remove();
+    planMsgEl.textContent = "Aún no has generado el plan.";
+    cy.nodes().removeClass("cycle");
   }
 
   function addEdge(from, to) {
@@ -207,10 +232,7 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
     cy.edges().removeClass("focusEdge");
     cy.getElementById(`${from}_${to}`).addClass("focusEdge");
 
-    // invalida el plan anterior
-    planCy.elements().remove();
-    planMsgEl.textContent = "Aún no generado.";
-    cy.nodes().removeClass("cycle");
+    invalidatePlan();
   }
 
   btnAdepB.addEventListener("click", () => {
@@ -231,6 +253,7 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
     markPairAsNone(pairs[pairIndex], edges);
     pairIndex = findNextPairIndex(pairs, edges);
     refreshQA();
+    invalidatePlan();
   });
 
   function handleGeneratePlan() {
@@ -238,42 +261,84 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
     planCy.elements().remove();
     planMsgEl.textContent = "";
 
-    const res = computePlanLevels(items, edges);
+    const mode = planModeEl.value;
+
+    if (mode === "waves") {
+      const res = computePlanLevels(items, edges);
+
+      if (!res.ok) {
+        res.cycleNodes.forEach((id) => cy.getElementById(id).addClass("cycle"));
+        planMsgEl.innerHTML =
+          `<span style="color:#d93025"><strong>Hay una contradicción en las dependencias</strong></span>. ` +
+          `Revisa los nodos en rojo arriba.`;
+        return;
+      }
+
+      renderPlanWaves(res.levels);
+      planMsgEl.innerHTML = `<strong>Plan generado:</strong> ${res.levels.length} fases, ${res.order.length} tareas.`;
+      return;
+    }
+
+    const res = topoSortPriority(items, edges);
 
     if (!res.ok) {
       res.cycleNodes.forEach((id) => cy.getElementById(id).addClass("cycle"));
       planMsgEl.innerHTML =
-        `<span style="color:#d93025"><strong>Hay un ciclo de dependencias</strong></span>. ` +
-        `Revisa los nodos en rojo en el grafo superior.`;
+        `<span style="color:#d93025"><strong>Hay una contradicción en las dependencias</strong></span>. ` +
+        `Revisa los nodos en rojo arriba.`;
       return;
     }
 
-    // ---- Layout manual por olas (columnas) ----
-    const colX = 140;     // inicio X
-    const colGap = 240;   // separación entre olas (columnas)
-    const rowY = 80;      // inicio Y
-    const rowGap = 84;    // separación entre nodos dentro de ola (filas)
+    renderPlanLinear(res.order);
+    planMsgEl.innerHTML = `<strong>Plan generado:</strong> ${res.order.length} pasos.`;
+  }
 
-    // construye nodos plan con posición (preset)
-    const planNodes = [];
-    const nodeIdMap = new Map(); // originalId -> planNodeId
+  function renderPlanLinear(orderIds) {
+    const startX = 120;
+    const stepX = 220;
+    const y = 160;
 
-    res.levels.forEach((levelIds, waveIdx) => {
+    const nodes = orderIds.map((id, idx) => {
+      const pid = `p_${id}`;
+      return {
+        data: { id: pid, label: idToItem.get(id)?.label ?? id },
+        position: { x: startX + idx * stepX, y },
+        locked: true,
+      };
+    });
+
+    const edgesSeq = [];
+    for (let i = 0; i < orderIds.length - 1; i++) {
+      edgesSeq.push({
+        data: { id: `pe_${i}`, source: `p_${orderIds[i]}`, target: `p_${orderIds[i + 1]}` },
+      });
+    }
+
+    planCy.add([...nodes, ...edgesSeq]);
+    planCy.fit(undefined, 30);
+  }
+
+  function renderPlanWaves(levels) {
+    const colX = 140;
+    const colGap = 260;
+    const rowY = 90;
+    const rowGap = 86;
+
+    const nodeIdMap = new Map();
+    const nodes = [];
+
+    levels.forEach((levelIds, waveIdx) => {
       levelIds.forEach((id, rowIdx) => {
         const pid = `p_${id}`;
         nodeIdMap.set(id, pid);
-        planNodes.push({
+        nodes.push({
           data: { id: pid, label: idToItem.get(id)?.label ?? id, wave: waveIdx + 1 },
-          position: {
-            x: colX + waveIdx * colGap,
-            y: rowY + rowIdx * rowGap,
-          },
+          position: { x: colX + waveIdx * colGap, y: rowY + rowIdx * rowGap },
           locked: true,
         });
       });
     });
 
-    // edges del plan: dependencias reales, pero pintadas entre nodos del plan
     const planEdges = edges
       .filter((e) => e.from && e.to)
       .map((e, i) => ({
@@ -285,10 +350,8 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
       }))
       .filter((e) => e.data.source && e.data.target);
 
-    planCy.add([...planNodes, ...planEdges]);
+    planCy.add([...nodes, ...planEdges]);
     planCy.fit(undefined, 30);
-
-    planMsgEl.innerHTML = `<strong>Plan generado:</strong> ${res.levels.length} olas, ${res.order.length} tareas.`;
   }
 
   refreshQA();

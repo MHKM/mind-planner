@@ -3,20 +3,35 @@ export function computePlanLevels(items, edges) {
 
   const adj = new Map(ids.map((id) => [id, []]));
   const indeg = new Map(ids.map((id) => [id, 0]));
+  const outdeg = new Map(ids.map((id) => [id, 0]));
 
   for (const e of edges) {
     if (!e.from || !e.to) continue;
+
     adj.get(e.from).push(e.to);
     indeg.set(e.to, (indeg.get(e.to) ?? 0) + 1);
+    outdeg.set(e.from, (outdeg.get(e.from) ?? 0) + 1);
   }
 
   // Ola 1: todos los de indegree 0
   let frontier = ids.filter((id) => (indeg.get(id) ?? 0) === 0);
+
+  // Ordena por más dependientes (outdeg desc) y luego por label para estabilidad
+  const labelById = new Map(items.map((it) => [it.id, it.label ?? it.id]));
+  const sortFrontier = (arr) =>
+    arr.sort((a, b) => {
+      const da = outdeg.get(a) ?? 0;
+      const db = outdeg.get(b) ?? 0;
+      if (db !== da) return db - da;
+      return String(labelById.get(a)).localeCompare(String(labelById.get(b)));
+    });
+
+  frontier = sortFrontier(frontier);
+
   const levels = [];
   let visitedCount = 0;
 
   while (frontier.length) {
-    // Para estabilidad visual (misma ola ordenada por label si te apetece)
     levels.push([...frontier]);
     visitedCount += frontier.length;
 
@@ -27,7 +42,7 @@ export function computePlanLevels(items, edges) {
         if (indeg.get(v) === 0) next.push(v);
       }
     }
-    frontier = next;
+    frontier = sortFrontier(next);
   }
 
   if (visitedCount !== ids.length) {
