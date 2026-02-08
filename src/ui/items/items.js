@@ -1,58 +1,19 @@
+import template from "./items.html?raw";
+import "./items.css";
+
 export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
-  root.innerHTML = `
-    <main class="container">
-      <h1>Describe las tareas</h1>
+  root.innerHTML = template;
 
-      <section class="card">
-        <div class="muted">Objetivo</div>
-        <div class="goal">${escapeHtml(goal || "—")}</div>
-      </section>
-
-      <section class="card">
-        <h2>Define entre 5 y 10 tareas</h2>
-        <p class="muted">
-          Escribe las tareas o pasos necesarios para lograr tu objetivo. Usa un nombre corto y, si quieres, añade una breve descripción.
-        </p>
-
-        <form id="add-form" class="stack">
-          <input
-            id="label-input"
-            type="text"
-            placeholder="Nombre de la tarea (ej: Diseñar UI, Preparar datos, Publicar)"
-            maxlength="30"
-            required
-          />
-          <textarea
-            id="desc-input"
-            placeholder="Descripción (opcional). Ej: qué incluye o qué significa “hecho”."
-            rows="2"
-          ></textarea>
-
-          <button type="submit">Añadir tarea</button>
-        </form>
-
-        <div class="muted counter">${items.length} / 10</div>
-
-        <ul id="items-list" class="list"></ul>
-
-        <div class="actions">
-          <button id="back-btn" type="button" class="secondary">Volver</button>
-          <button id="next-btn" type="button">Continuar</button>
-        </div>
-
-        <small class="muted">
-          Consejo: intenta que cada tarea sea accionable (algo que puedas marcar como “hecho”).
-        </small>
-      </section>
-    </main>
-  `;
+  // Inyectar el objetivo de forma segura
+  const goalText = root.querySelector("#goal-text");
+  goalText.textContent = goal || "—";
 
   const labelInput = root.querySelector("#label-input");
   const descInput = root.querySelector("#desc-input");
   const listEl = root.querySelector("#items-list");
   const nextBtn = root.querySelector("#next-btn");
   const backBtn = root.querySelector("#back-btn");
-  const counterEl = root.querySelector(".counter");
+  const counterEl = root.querySelector("#counter");
 
   renderList();
   labelInput.focus();
