@@ -22,9 +22,13 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
   root.querySelector("#back-btn").addEventListener("click", onBack);
 
   // ===== Cytoscape: grafo principal =====
+  const truncateLabel = (label, maxLength = 25) => {
+    return label.length > maxLength ? label.substring(0, maxLength) + '...' : label;
+  };
+
   const mainElements = [
     ...items.map((it) => ({
-      data: { id: it.id, label: it.label, description: it.description },
+      data: { id: it.id, label: truncateLabel(it.label), description: it.description },
     })),
     ...edges
       .filter((e) => e.from && e.to)
@@ -37,20 +41,28 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
     container: root.querySelector("#cy"),
     elements: mainElements,
     layout: { name: "circle" },
+    autoungrabify: true,
+    userZoomingEnabled: false,
+    userPanningEnabled: false,
     style: [
       {
         selector: "node",
         style: {
+          shape: "round-rectangle",
           "background-color": "#ffffff",
           "border-width": 2,
           "border-color": "#d0d4dd",
           label: "data(label)",
           "text-valign": "center",
           "text-halign": "center",
-          "font-size": 12,
+          "text-wrap": "wrap",
+          "text-max-width": "180px",
+          "font-size": "14px",
+          "font-weight": "500",
           color: "#111",
-          width: 52,
-          height: 52,
+          width: "label",
+          height: "label",
+          "padding": "12px",
         },
       },
       {
@@ -74,17 +86,23 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
     container: root.querySelector("#planCy"),
     elements: [],
     layout: { name: "preset" },
+    autoungrabify: true,
+    userZoomingEnabled: false,
+    userPanningEnabled: false,
     style: [
       {
         selector: "node",
         style: {
           shape: "round-rectangle",
-          width: 170,
-          height: 48,
+          width: 200,
+          height: 60,
           label: "data(label)",
           "text-valign": "center",
           "text-halign": "center",
-          "font-size": 12,
+          "text-wrap": "wrap",
+          "text-max-width": "180px",
+          "font-size": "14px",
+          "font-weight": "500",
           color: "#111",
           "background-color": "#ffffff",
           "border-width": 2,
