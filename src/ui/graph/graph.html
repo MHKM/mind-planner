@@ -18,14 +18,19 @@
       </div>
 
       <div class="qa">
-        <h3 style="margin-top:0">Define qué va antes</h3>
+        <h3 style="margin-top:0">Define las dependencias</h3>
         <p class="muted">
-          Para cada pareja de tareas, indica si una necesita que la otra esté hecha antes.
+          Para cada pareja de tareas, indica si una depende de la otra.
         </p>
 
         <div class="qa-card">
           <div class="muted">Progreso</div>
-          <div id="progress" class="progress"></div>
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <div id="progress-text" class="progress-text"></div>
+          </div>
 
           <div id="question" class="question"></div>
 
@@ -35,9 +40,11 @@
             <button id="none" type="button" class="secondary">Son independientes</button>
           </div>
 
-          <small class="muted small">
-            Ejemplo: si "Publicar" necesita "Preparar" antes, entonces primero va "Preparar".
-          </small>
+          <div class="qa-navigation">
+            <button id="prev-question" type="button" class="secondary">← Anterior</button>
+            <span id="question-counter" class="muted small"></span>
+            <button id="next-question" type="button" class="secondary">Siguiente →</button>
+          </div>
         </div>
       </div>
     </div>
@@ -51,8 +58,8 @@
         <div class="plan-select">
           <span class="plan-select__label muted small">Modo</span>
           <select id="plan-mode" class="plan-select__control" aria-label="Modo de plan">
-            <option value="waves" selected>Paralelo (olas)</option>
-            <option value="linear">Secuencia (una tras otra)</option>
+            <option value="waves">Paralelo (olas)</option>
+            <option value="linear" selected>Secuencia (una tras otra)</option>
           </select>
         </div>
 
@@ -63,6 +70,18 @@
     <p class="muted" style="margin-top:8px">
       En <strong>Secuencia</strong>, si hay varias tareas posibles a la vez, se prioriza la que desbloquea más tareas.
     </p>
+
+    <div id="cycle-warning" class="cycle-warning" style="display:none">
+      <div class="cycle-warning-header">
+        <span class="cycle-warning-icon">⚠️</span>
+        <strong>Dependencia circular detectada</strong>
+      </div>
+      <p class="cycle-warning-text" id="cycle-warning-text"></p>
+      <div id="cycle-items" class="cycle-items"></div>
+      <div class="cycle-warning-actions">
+        <button id="review-cycle" type="button" class="secondary">Revisar dependencias</button>
+      </div>
+    </div>
 
     <div id="planCy" class="cy-plan"></div>
     <div id="plan-msg" class="muted small" style="margin-top:10px">Aún no has generado el plan.</div>
