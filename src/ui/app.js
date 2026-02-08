@@ -1,12 +1,12 @@
-import { renderGoalScreen } from "./goalScreen.js";
-import { renderItemsScreen } from "./itemsScreen.js";
-import { renderGraphScreen } from "./graphScreen.js";
+import { renderGoal } from "./goal/goal.js";
+import { renderItemsScreen } from "./items/items.js";
+import { renderGraphScreen } from "./graph/graph.js";
 import { state } from "../app/state.js";
 
 export function renderApp(root) {
   // Paso 1: objetivo
   if (!state.goal) {
-    renderGoalScreen(root, {
+    renderGoal(root, {
       initialValue: state.goal,
       onSubmit: (goal) => {
         state.goal = goal.trim();

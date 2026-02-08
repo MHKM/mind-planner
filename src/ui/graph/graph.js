@@ -1,87 +1,22 @@
+import template from "./graph.html?raw";
+import "./graph.css";
 import cytoscape from "cytoscape";
-import { allPairs, edgeExists } from "../app/pairs.js";
-import { computePlanLevels } from "../app/planLevels.js";
-import { topoSortPriority } from "../app/topoSortPriority.js";
+import { allPairs, edgeExists } from "../../app/pairs.js";
+import { computePlanLevels } from "../../app/planLevels.js";
+import { topoSortPriority } from "../../app/topoSortPriority.js";
 
 export function renderGraphScreen(root, { goal, items, edges, onBack }) {
+  root.innerHTML = template;
+
+  // Inyectar el objetivo de forma segura
+  const goalText = root.querySelector("#goal-text");
+  goalText.textContent = goal || "—";
+
   const idToItem = new Map(items.map((it) => [it.id, it]));
   const ids = items.map((it) => it.id);
   const pairs = allPairs(ids);
 
   let pairIndex = findNextPairIndex(pairs, edges);
-
-  root.innerHTML = `
-    <main class="container">
-      <h1>Define el orden de las tareas</h1>
-
-      <section class="card">
-        <div class="muted">Objetivo</div>
-        <div class="goal">${escapeHtml(goal || "—")}</div>
-      </section>
-
-      <section class="card">
-        <div class="graph-header">
-          <h2 style="margin:0">Dependencias entre tareas</h2>
-          <button id="back-btn" type="button" class="secondary">Volver</button>
-        </div>
-
-        <div class="two-col">
-          <div>
-            <div id="cy" class="cy-container"></div>
-          </div>
-
-          <div class="qa">
-            <h3 style="margin-top:0">Define qué va antes</h3>
-            <p class="muted">
-              Para cada pareja de tareas, indica si una necesita que la otra esté hecha antes.
-            </p>
-
-            <div class="qa-card">
-              <div class="muted">Progreso</div>
-              <div id="progress" class="progress"></div>
-
-              <div id="question" class="question"></div>
-
-              <div class="actions-col">
-                <button id="a-dep-b" type="button"></button>
-                <button id="b-dep-a" type="button"></button>
-                <button id="none" type="button" class="secondary">Son independientes</button>
-              </div>
-
-              <small class="muted small">
-                Ejemplo: si “Publicar” necesita “Preparar” antes, entonces primero va “Preparar”.
-              </small>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="graph-header">
-          <h2 style="margin:0">Tu plan</h2>
-
-          <div class="plan-controls">
-            <div class="plan-select">
-              <span class="plan-select__label muted small">Modo</span>
-              <select id="plan-mode" class="plan-select__control" aria-label="Modo de plan">
-                <option value="waves" selected>Paralelo (olas)</option>
-                <option value="linear">Secuencia (una tras otra)</option>
-              </select>
-            </div>
-
-            <button id="gen-plan" type="button">Generar plan</button>
-          </div>
-        </div>
-
-        <p class="muted" style="margin-top:8px">
-          En <strong>Secuencia</strong>, si hay varias tareas posibles a la vez, se prioriza la que desbloquea más tareas.
-        </p>
-
-        <div id="planCy" class="cy-plan"></div>
-        <div id="plan-msg" class="muted small" style="margin-top:10px">Aún no has generado el plan.</div>
-      </section>
-    </main>
-  `;
 
   root.querySelector("#back-btn").addEventListener("click", onBack);
 
