@@ -1,7 +1,8 @@
 import template from "./items.html?raw";
 import "./items.css";
+import { showToast } from "../../utils/toast.js";
 
-export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
+export function renderItemsScreen(root, { goal, items = [], onBack, onNext, hasExistingEdges = false }) {
   root.innerHTML = template;
 
   // Inyectar el objetivo de forma segura
@@ -15,6 +16,14 @@ export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
   const backBtn = root.querySelector("#back-btn");
   const counterEl = root.querySelector("#counter");
 
+  // Mostrar aviso si hay dependencias existentes
+  if (hasExistingEdges) {
+    showToast(
+      "Ya has definido dependencias entre tareas. Si añades o eliminas tareas, se borrarán las dependencias afectadas.",
+      { type: 'warning', duration: 5000 }
+    );
+  }
+
   renderList();
   labelInput.focus();
 
@@ -22,7 +31,7 @@ export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
     e.preventDefault();
 
     if (items.length >= 10) {
-      alert("Puedes añadir como máximo 10 tareas.");
+      showToast("Puedes añadir como máximo 10 tareas.", { type: 'warning' });
       return;
     }
 
@@ -57,7 +66,7 @@ export function renderItemsScreen(root, { goal, items = [], onBack, onNext }) {
 
   nextBtn.addEventListener("click", () => {
     if (items.length < 5) {
-      alert("Añade al menos 5 tareas para poder generar el plan.");
+      showToast("Añade al menos 5 tareas para poder generar el plan.", { type: 'warning' });
       return;
     }
     onNext(items);
