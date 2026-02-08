@@ -4,6 +4,7 @@ import cytoscape from "cytoscape";
 import { allPairs, edgeExists } from "../../app/pairs.js";
 import { computePlanLevels } from "../../app/planLevels.js";
 import { topoSortPriority } from "../../app/topoSortPriority.js";
+import { detectCycle, findCycleQuestions } from "../../app/cycleDetector.js";
 
 export function renderGraphScreen(root, { goal, items, edges, onBack }) {
   root.innerHTML = template;
@@ -16,7 +17,7 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
   const ids = items.map((it) => it.id);
   const pairs = allPairs(ids);
 
-  let pairIndex = findNextPairIndex(pairs, edges);
+  let pairIndex = 0; // Empezar desde la primera pregunta
 
   root.querySelector("#back-btn").addEventListener("click", onBack);
 
@@ -100,25 +101,111 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
           "curve-style": "bezier",
         },
       },
+      { selector: ".focus", style: { "border-color": "#1589ee", "border-width": 4 } },
+      { selector: ".focusEdge", style: { "line-color": "#1589ee", "target-arrow-color": "#1589ee", width: 3 } },
       { selector: ".cycle", style: { "border-color": "#d93025", "border-width": 4 } },
+      { selector: ".cycle-edge", style: { "line-color": "#dc2626", "target-arrow-color": "#dc2626", width: 4 } },
     ],
   });
 
-  const progressEl = root.querySelector("#progress");
+  const progressEl = root.querySelector("#progress-text");
+  const progressFillEl = root.querySelector("#progress-fill");
   const questionEl = root.querySelector("#question");
   const planMsgEl = root.querySelector("#plan-msg");
   const planModeEl = root.querySelector("#plan-mode");
+  const questionCounterEl = root.querySelector("#question-counter");
+  const cycleWarningEl = root.querySelector("#cycle-warning");
+  const cycleWarningTextEl = root.querySelector("#cycle-warning-text");
+  const cycleItemsEl = root.querySelector("#cycle-items");
 
   const btnAdepB = root.querySelector("#a-dep-b");
   const btnBdepA = root.querySelector("#b-dep-a");
   const btnNone = root.querySelector("#none");
   const btnGenPlan = root.querySelector("#gen-plan");
+  const btnPrevQuestion = root.querySelector("#prev-question");
+  const btnNextQuestion = root.querySelector("#next-question");
+  const btnReviewCycle = root.querySelector("#review-cycle");
 
   btnGenPlan.addEventListener("click", handleGeneratePlan);
+  btnPrevQuestion.addEventListener("click", () => {
+    if (pairIndex > 0) {
+      pairIndex--;
+      refreshQA();
+    }
+  });
+  btnNextQuestion.addEventListener("click", () => {
+    if (pairIndex < pairs.length - 1) {
+      pairIndex++;
+      refreshQA();
+    }
+  });
+
+  btnReviewCycle.addEventListener("click", () => {
+    const cycleInfo = detectCycle(items, edges);
+    if (cycleInfo.hasCycle) {
+      const questionIndices = findCycleQuestions(cycleInfo.cycleEdges, pairs);
+      if (questionIndices.length > 0) {
+        pairIndex = questionIndices[0];
+        refreshQA();
+      }
+    }
+  });
+
+
+  function getCurrentAnswer() {
+    if (pairIndex >= pairs.length) return null;
+    const [a, b] = pairs[pairIndex];
+    
+    if (edgeExists(edges, a, b)) return { type: 'a-dep-b', from: a, to: b };
+    if (edgeExists(edges, b, a)) return { type: 'b-dep-a', from: b, to: a };
+    if (edges.some((e) => e.noneId === noneId(a, b))) return { type: 'none' };
+    
+    return null;
+  }
+
+  function clearCurrentAnswer() {
+    if (pairIndex >= pairs.length) return;
+    const [a, b] = pairs[pairIndex];
+    
+    // Eliminar edge a->b
+    const idx1 = edges.findIndex((e) => e.from === a && e.to === b);
+    if (idx1 >= 0) {
+      edges.splice(idx1, 1);
+      const edgeId = `${a}_${b}`;
+      cy.getElementById(edgeId).remove();
+    }
+    
+    // Eliminar edge b->a
+    const idx2 = edges.findIndex((e) => e.from === b && e.to === a);
+    if (idx2 >= 0) {
+      edges.splice(idx2, 1);
+      const edgeId = `${b}_${a}`;
+      cy.getElementById(edgeId).remove();
+    }
+    
+    // Eliminar marcador "none"
+    const nid = noneId(a, b);
+    const idx3 = edges.findIndex((e) => e.noneId === nid);
+    if (idx3 >= 0) {
+      edges.splice(idx3, 1);
+    }
+    
+    invalidatePlan();
+  }
 
   function refreshQA() {
     const decided = countDecidedPairs(pairs, edges);
+    const percentage = pairs.length > 0 ? (decided / pairs.length) * 100 : 0;
+    
     progressEl.textContent = `${decided} / ${pairs.length} parejas`;
+    progressFillEl.style.width = `${percentage}%`;
+    questionCounterEl.textContent = `Pregunta ${pairIndex + 1} de ${pairs.length}`;
+
+    btnPrevQuestion.disabled = pairIndex <= 0;
+    btnNextQuestion.disabled = pairIndex >= pairs.length - 1;
+    
+    // Deshabilitar generar plan si no están todas contestadas
+    btnGenPlan.disabled = decided < pairs.length;
 
     if (pairIndex >= pairs.length) {
       questionEl.innerHTML = `<strong>¡Listo!</strong><br/>Ya has respondido todas las parejas.`;
@@ -135,24 +222,51 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
     const B = idToItem.get(b);
 
     questionEl.innerHTML = `
-      <div class="muted">Pregunta</div>
-      <div><strong>${escapeHtml(A.label)}</strong> y <strong>${escapeHtml(B.label)}</strong></div>
-      <div class="muted small" style="margin-top:6px">¿Cuál necesita ir antes?</div>
+      <div class="muted">Pregunta ${pairIndex + 1}</div>
+      <div class="muted small" style="margin-top:6px">¿<strong>${escapeHtml(A.label)}</strong> depende de <strong>${escapeHtml(B.label)}</strong>?</div>
     `;
 
-    btnAdepB.textContent = `${A.label} necesita ${B.label} antes`;
-    btnBdepA.textContent = `${B.label} necesita ${A.label} antes`;
+    btnAdepB.textContent = `${A.label} depende de ${B.label}`;
+    btnBdepA.textContent = `${B.label} depende de ${A.label}`;
+
+    // Resetear estilos de todos los botones
+    btnAdepB.classList.remove('selected');
+    btnBdepA.classList.remove('selected');
+    btnNone.classList.remove('selected');
+    btnAdepB.disabled = false;
+    btnBdepA.disabled = false;
+    btnNone.disabled = false;
+
+    // Marcar botón seleccionado si existe una respuesta
+    const currentAnswer = getCurrentAnswer();
+    if (currentAnswer) {
+      if (currentAnswer.type === 'a-dep-b') {
+        btnAdepB.classList.add('selected');
+      } else if (currentAnswer.type === 'b-dep-a') {
+        btnBdepA.classList.add('selected');
+      } else {
+        btnNone.classList.add('selected');
+      }
+    }
 
     cy.nodes().removeClass("focus");
     cy.getElementById(a).addClass("focus");
     cy.getElementById(b).addClass("focus");
+    
+    cycleWarningEl.style.display = 'none';
     cy.edges().removeClass("focusEdge");
+    if (currentAnswer && currentAnswer.from) {
+      const edgeId = `${currentAnswer.from}_${currentAnswer.to}`;
+      cy.getElementById(edgeId).addClass("focusEdge");
+    }
   }
 
   function invalidatePlan() {
     planCy.elements().remove();
     planMsgEl.textContent = "Aún no has generado el plan.";
     cy.nodes().removeClass("cycle");
+    cy.edges().removeClass("cycle-edge");
+    cycleWarningEl.style.display = 'none';
   }
 
   function addEdge(from, to) {
@@ -172,29 +286,66 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
 
   btnAdepB.addEventListener("click", () => {
     const [a, b] = pairs[pairIndex];
+    clearCurrentAnswer();
     addEdge(b, a);
-    pairIndex = findNextPairIndex(pairs, edges);
+    // Avanzar automáticamente a la siguiente sin respuesta
+    const nextUnanswered = findNextPairIndex(pairs, edges);
+    if (nextUnanswered < pairs.length) {
+      pairIndex = nextUnanswered;
+    } else if (pairIndex < pairs.length - 1) {
+      pairIndex++;
+    }
     refreshQA();
+    
+    // Si se completaron todas las preguntas, generar plan automáticamente
+    if (countDecidedPairs(pairs, edges) === pairs.length) {
+      handleGeneratePlan();
+    }
   });
 
   btnBdepA.addEventListener("click", () => {
     const [a, b] = pairs[pairIndex];
+    clearCurrentAnswer();
     addEdge(a, b);
-    pairIndex = findNextPairIndex(pairs, edges);
+    // Avanzar automáticamente a la siguiente sin respuesta
+    const nextUnanswered = findNextPairIndex(pairs, edges);
+    if (nextUnanswered < pairs.length) {
+      pairIndex = nextUnanswered;
+    } else if (pairIndex < pairs.length - 1) {
+      pairIndex++;
+    }
     refreshQA();
+    
+    // Si se completaron todas las preguntas, generar plan automáticamente
+    if (countDecidedPairs(pairs, edges) === pairs.length) {
+      handleGeneratePlan();
+    }
   });
 
   btnNone.addEventListener("click", () => {
+    clearCurrentAnswer();
     markPairAsNone(pairs[pairIndex], edges);
-    pairIndex = findNextPairIndex(pairs, edges);
+    // Avanzar automáticamente a la siguiente sin respuesta
+    const nextUnanswered = findNextPairIndex(pairs, edges);
+    if (nextUnanswered < pairs.length) {
+      pairIndex = nextUnanswered;
+    } else if (pairIndex < pairs.length - 1) {
+      pairIndex++;
+    }
     refreshQA();
-    invalidatePlan();
+    
+    // Si se completaron todas las preguntas, generar plan automáticamente
+    if (countDecidedPairs(pairs, edges) === pairs.length) {
+      handleGeneratePlan();
+    }
   });
 
   function handleGeneratePlan() {
     cy.nodes().removeClass("cycle");
+    cy.edges().removeClass("cycle-edge");
     planCy.elements().remove();
     planMsgEl.textContent = "";
+    cycleWarningEl.style.display = 'none';
 
     const mode = planModeEl.value;
 
@@ -202,30 +353,82 @@ export function renderGraphScreen(root, { goal, items, edges, onBack }) {
       const res = computePlanLevels(items, edges);
 
       if (!res.ok) {
-        res.cycleNodes.forEach((id) => cy.getElementById(id).addClass("cycle"));
-        planMsgEl.innerHTML =
-          `<span style="color:#d93025"><strong>Hay una contradicción en las dependencias</strong></span>. ` +
-          `Revisa los nodos en rojo arriba.`;
+        showCycleWarning(res.cycleNodes);
         return;
       }
 
       renderPlanWaves(res.levels);
-      planMsgEl.innerHTML = `<strong>Plan generado:</strong> ${res.levels.length} fases, ${res.order.length} tareas.`;
+      planMsgEl.innerHTML = `<strong>✓ Plan generado:</strong> ${res.levels.length} fases, ${res.order.length} tareas.`;
       return;
     }
 
     const res = topoSortPriority(items, edges);
 
     if (!res.ok) {
-      res.cycleNodes.forEach((id) => cy.getElementById(id).addClass("cycle"));
-      planMsgEl.innerHTML =
-        `<span style="color:#d93025"><strong>Hay una contradicción en las dependencias</strong></span>. ` +
-        `Revisa los nodos en rojo arriba.`;
+      showCycleWarning(res.cycleNodes);
       return;
     }
 
     renderPlanLinear(res.order);
-    planMsgEl.innerHTML = `<strong>Plan generado:</strong> ${res.order.length} pasos.`;
+    planMsgEl.innerHTML = `<strong>✓ Plan generado:</strong> ${res.order.length} pasos.`;
+  }
+
+  function showCycleWarning(cycleNodes) {
+    cy.nodes().removeClass("cycle");
+    cy.edges().removeClass("cycle-edge");
+    
+    cycleNodes.forEach((id) => cy.getElementById(id).addClass("cycle"));
+    
+    const cycleInfo = detectCycle(items, edges);
+    
+    if (cycleInfo.hasCycle) {
+      // Resaltar edges del ciclo
+      cycleInfo.cycleEdges.forEach(({ from, to }) => {
+        const edgeId = `${from}_${to}`;
+        cy.getElementById(edgeId).addClass("cycle-edge");
+      });
+
+      // Mostrar warning con detalles
+      const cycleTaskNames = cycleInfo.cycle.map(id => idToItem.get(id)?.label || id);
+      
+      cycleWarningTextEl.innerHTML = `Las siguientes tareas forman un círculo imposible:`;
+      
+      cycleItemsEl.innerHTML = cycleInfo.cycleEdges.map(({ from, to }, idx) => {
+        const fromName = idToItem.get(from)?.label || from;
+        const toName = idToItem.get(to)?.label || to;
+        const pairIdx = pairs.findIndex(([a, b]) => 
+          (a === from && b === to) || (a === to && b === from)
+        );
+        
+        return `
+          <div class="cycle-item">
+            <span class="cycle-item-task">${escapeHtml(fromName)}</span>
+            <span class="cycle-item-arrow">→</span>
+            <span class="cycle-item-task">${escapeHtml(toName)}</span>
+            ${pairIdx >= 0 ? `
+              <button 
+                class="secondary cycle-item-action" 
+                data-question-idx="${pairIdx}"
+                onclick="this.getRootNode().host?.jumpToQuestion?.(${pairIdx}) || window.jumpToQuestion?.(${pairIdx})"
+              >Ver pregunta</button>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+      
+      cycleWarningEl.style.display = 'block';
+      
+      // Función global para navegar a pregunta
+      window.jumpToQuestion = (idx) => {
+        pairIndex = idx;
+        refreshQA();
+        root.querySelector('.qa-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+    }
+    
+    planMsgEl.innerHTML =
+      `<span style="color:#d93025"><strong>⚠️ Dependencias circulares detectadas</strong></span><br/>` +
+      `Revisa la explicación arriba para resolverlas.`;
   }
 
   function renderPlanLinear(orderIds) {

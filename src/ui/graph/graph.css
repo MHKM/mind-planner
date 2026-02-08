@@ -7,13 +7,20 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 16px;
 }
 
 .two-col {
   display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 12px;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
   align-items: start;
+}
+
+.two-col > div {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 900px) {
@@ -23,14 +30,20 @@
 }
 
 .qa {
-  /* Contenedor de Q&A */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
 }
 
 .qa-card {
   border: 1px solid #e3e6ee;
   border-radius: 12px;
-  padding: 12px;
+  padding: 20px;
   background: #fff;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .progress {
@@ -38,13 +51,113 @@
   margin-bottom: 10px;
 }
 
+.progress-container {
+  margin-bottom: 20px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e3e6ee;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0369a1 0%, #0ea5e9 100%);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+  width: 0%;
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-text {
+  font-size: 13px;
+  color: #555;
+  text-align: center;
+  font-weight: 600;
+}
+
 .question {
-  margin: 10px 0 12px;
+  margin: 16px 0 20px;
 }
 
 .actions-col {
   display: grid;
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.actions-col button {
+  transition: all 0.2s ease;
+  padding: 12px 16px;
+  font-size: 15px;
+  width: 100%;
+}
+
+.actions-col button.selected {
+  background: #0369a1;
+  color: white;
+  border-color: #0369a1;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(3, 105, 161, 0.3);
+}
+
+.actions-col button.secondary.selected {
+  background: #0369a1;
+  color: white;
+  border-color: #0369a1;
+}
+
+.qa-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e3e6ee;
+}
+
+.qa-navigation button {
+  flex: 1;
+  max-width: 120px;
+  white-space: nowrap;
+  padding: 10px 12px;
+}
+
+#question-counter {
+  text-align: center;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 /* ===== Plan controls (select bonito) ===== */
@@ -107,8 +220,8 @@
 /* ===== Cytoscape containers ===== */
 .cy-container {
   width: 100%;
-  max-width: 100%;
-  height: 480px;
+  flex: 1;
+  min-height: 500px;
   border: 1px solid #e3e6ee;
   border-radius: 12px;
   background: #fff;
@@ -118,9 +231,85 @@
 .cy-plan {
   width: 100%;
   max-width: 100%;
-  height: 320px;
+  height: 360px;
   border: 1px solid #e3e6ee;
   border-radius: 12px;
   background: #fff;
   overflow: hidden;
+  margin-top: 12px;
+  padding: 8px;
+}
+
+/* ===== Cycle warning ===== */
+.cycle-warning {
+  background: #fef2f2;
+  border: 2px solid #fca5a5;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.cycle-warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #991b1b;
+}
+
+.cycle-warning-icon {
+  font-size: 20px;
+}
+
+.cycle-warning-text {
+  color: #7f1d1d;
+  margin: 8px 0;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.cycle-items {
+  background: white;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+}
+
+.cycle-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  margin: 4px 0;
+  background: #fef2f2;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.cycle-item-arrow {
+  color: #dc2626;
+  font-weight: bold;
+}
+
+.cycle-item-task {
+  font-weight: 600;
+  color: #991b1b;
+}
+
+.cycle-item-action {
+  margin-left: auto;
+  padding: 4px 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cycle-warning-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cycle-warning-actions button {
+  flex: 1;
 }
